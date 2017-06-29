@@ -152,6 +152,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int EVENT_SIM_GET_ATR_DONE = 48;
     private static final int CMD_OPEN_CHANNEL_WITH_P2 = 49;
     private static final int CMD_TOGGLE_2G = 998;
+    private static final int CMD_TOGGLE_3G = 997;
 
     private static final String PRIMARY_CARD_PROPERTY_NAME = "persist.radio.primarycard";
 
@@ -1146,6 +1147,38 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
         log("DefaultSubId: " + phoneSubId);
         log("NetworkType: " + network);
+    }
+
+     public void toggleThreeG(boolean aon) {
+        int anetwork = -1;
+        final int aphoneSubId = mSubscriptionController.getDefaultDataSubId();
+        Phone bphone = getPhone(aphoneSubId);
+
+        if (aon) {
+            if(aphoneSubId != 0) {
+                pNetwork = android.provider.Settings.Global.getInt(mApp.getContentResolver(),
+                    android.provider.Settings.Global.PREFERRED_NETWORK_MODE + aphoneSubId, 0);
+            } else {
+                pNetwork = android.provider.Settings.Global.getInt(mApp.getContentResolver(),
+                    android.provider.Settings.Global.PREFERRED_NETWORK_MODE, 0);
+            }
+            anetwork = Phone.NT_MODE_WCDMA_PREF;
+        } else {
+            anetwork = pNetwork;
+        }
+
+        bphone.setPreferredNetworkType(anetwork,
+                mMainThreadHandler.obtainMessage(CMD_TOGGLE_3G));
+        if(aphoneSubId != 0) {
+            android.provider.Settings.Global.putInt(mApp.getContentResolver(),
+                android.provider.Settings.Global.PREFERRED_NETWORK_MODE + aphoneSubId, anetwork);
+        } else {
+            android.provider.Settings.Global.putInt(mApp.getContentResolver(),
+                android.provider.Settings.Global.PREFERRED_NETWORK_MODE, anetwork);
+        }
+
+        log("DefaultSubId: " + aphoneSubId);
+        log("NetworkType: " + anetwork);
     }
 
     /**
