@@ -39,6 +39,7 @@ import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.service.carrier.CarrierIdentifier;
@@ -153,6 +154,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int CMD_OPEN_CHANNEL_WITH_P2 = 49;
     private static final int CMD_TOGGLE_2G = 998;
     private static final int CMD_TOGGLE_3G = 997;
+    private static final int CMD_TOGGLE_LTE = 99; // not used yet
 
     private static final String PRIMARY_CARD_PROPERTY_NAME = "persist.radio.primarycard";
 
@@ -1115,6 +1117,46 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         intent.putExtra(SUBSCRIPTION_KEY, subId);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         mApp.startActivity(intent);
+    }
+
+    public void toggleLTE(boolean on) {
+        int network = getPreferredNetworkMode();
+        boolean isCdmaDevice = mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE;
+
+        switch (network) {
+        // GSM Devices
+        case Phone.NT_MODE_WCDMA_PREF:
+        case Phone.NT_MODE_GSM_UMTS:
+            network = Phone.NT_MODE_LTE_GSM_WCDMA;
+            break;
+        case Phone.NT_MODE_LTE_GSM_WCDMA:
+            network = Phone.NT_MODE_WCDMA_PREF;
+            break;
+        // GSM and CDMA devices
+        case Phone.NT_MODE_GLOBAL:
+            // Wtf to do here?
+            network = Phone.NT_MODE_LTE_CDMA_EVDO_GSM_WCDMA;
+            break;
+        case Phone.NT_MODE_LTE_CDMA_EVDO_GSM_WCDMA:
+            // Determine the correct network type
+            if (isCdmaDevice) {
+                network = Phone.NT_MODE_CDMA;
+            } else {
+                network = Phone.NT_MODE_WCDMA_PREF;
+            }
+            break;
+        // CDMA Devices
+        case Phone.NT_MODE_CDMA:
+            if (SystemProperties.getInt("ro.telephony.default_network", 0) ==
+                        RILConstants.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA) {
+                network = Phone.NT_MODE_LTE_CDMA_EVDO_GSM_WCDMA;
+            } else {
+                network = Phone.NT_MODE_LTE_CDMA_AND_EVDO;
+            }
+            break;
+        case Phone.NT_MODE_LTE_CDMA_AND_EVDO:
+            network = Phone.NT_MODE_CDMA;
+            break;
     }
 
      public void toggle2G(boolean on) {
