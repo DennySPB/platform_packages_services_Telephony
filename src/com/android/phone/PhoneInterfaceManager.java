@@ -1119,7 +1119,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         mApp.startActivity(intent);
     }
 
-    public void toggleLTE(boolean on) {
+    private int getPreferredNetworkMode() {
+        int preferredNetworkMode = RILConstants.PREFERRED_NETWORK_MODE;
+        if (mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) {
+            preferredNetworkMode = Phone.NT_MODE_GLOBAL;
+        }
+        int network = Settings.Global.getInt(mPhone.getContext().getContentResolver(),
+              Settings.Global.PREFERRED_NETWORK_MODE, preferredNetworkMode);
+        return network;
+    }
+
+     public void toggleLTE(boolean on) {
         int network = getPreferredNetworkMode();
         boolean isCdmaDevice = mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE;
 
@@ -1157,7 +1167,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         case Phone.NT_MODE_LTE_CDMA_AND_EVDO:
             network = Phone.NT_MODE_CDMA;
             break;
-    }
+        }
+     }
 
      public void toggle2G(boolean on) {
         int network = -1;
